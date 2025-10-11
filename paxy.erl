@@ -1,5 +1,5 @@
 -module(paxy).
--export([start/1, stop/0, stop/1]).
+-export([start/1, stop/0, stop/1, crash/1, crash/0]).
 
 -define(RED, {255,0,0}).
 -define(BLUE, {0,0,255}).
@@ -15,6 +15,7 @@ start(Sleep) ->
   PropInfo = [{fry, ?RED}, {bender, ?GREEN}, {leela, ?BLUE}, {farnsworth, ?YELLOW}, {kiff, ?CYAN}],
   register(gui, spawn(fun() -> gui:start(AcceptorNames, ProposerNames) end)),
   gui ! {reqState, self()},
+  % crash(homer),
   receive
     {reqState, State} ->
       {AccIds, PropIds} = State,
@@ -79,4 +80,34 @@ stop(Name) ->
       Pid ! stop
   end.
 
+crash(Name) ->
+  case whereis(Name) of
+    undefined ->
+      ok;
+    Pid ->
+      unregister(Name),
+      exit(Pid, "crash"),
+      pers:open(Name),
+      {_, _, _, Pn} = pers:read(Name),
+      Pn ! {updateAcc, "Voted: CRASHED", "Promised: CRASHED", {0,0,0}},
+      pers:close(Name),
+      timer:sleep(3000),
+      register(Name, acceptor:start(Name, na))
+  end.
 
+crash() ->
+  case whereis(homer) of
+    undefined ->
+      io:format("[CRASH] Name ~w undefined~n", [homer]),
+      ok;
+    Pid ->
+      io:format("[CRASH] Name ~w defined~n", [homer]),
+      unregister(homer),
+      exit(Pid, "crash"),
+      pers:open(homer),
+      {_, _, _, Pn} = pers:read(homer),
+      Pn ! {updateAcc, "Voted: CRASHED", "Promised: CRASHED", {0,0,0}},
+      pers:close(homer),
+      timer:sleep(3000),
+      register(homer, acceptor:start(homer, na))
+  end.

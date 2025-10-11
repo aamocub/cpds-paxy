@@ -4,3 +4,4 @@ rebar*
 report*
 !report.tex
 *.dump
+.DS_Store
